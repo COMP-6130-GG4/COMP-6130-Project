@@ -1,9 +1,9 @@
 import csv
 import pandas as pd
-#from keras import Input, Model
-#from keras.activations import softmax
-#from keras.layers import Embedding, LSTM, Dense
-#from keras.optimizers import RMSprop
+from tensorflow.keras import Input, Model
+from tensorflow.keras.activations import softmax
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.preprocessing.text import Tokenizer
@@ -35,18 +35,18 @@ class ChatNN():
 		max_length_input = max(len(x) for x in self.tokenized_inputs)
 		print(f'Max Length Input: {max_length_input}')
 		# pad each input with zeros to the end so that each token is as long as the max
-		encoder_input_data = pad_sequences(self.tokenized_inputs, maxlen=max_length_input, padding='post')
+		self.encoder_input_data = pad_sequences(self.tokenized_inputs, maxlen=max_length_input, padding='post')
 
-		print(encoder_input_data.shape)
+		print(self.encoder_input_data.shape)
 
 		self.tokenized_targets = self.tokenizer.texts_to_sequences(self.targetList)
 		max_length_target = max(len(x) for x in self.tokenized_targets)
 
-		decoder_input_data = pad_sequences(self.tokenized_targets, maxlen=max_length_target, padding='post')
+		self.decoder_input_data = pad_sequences(self.tokenized_targets, maxlen=max_length_target, padding='post')
 
 		print(f'Max Length Target: {max_length_target}')
 
-		print(decoder_input_data.shape)
+		print(self.decoder_input_data.shape)
 
 		# perform one hot encoding of targets
 
@@ -55,10 +55,54 @@ class ChatNN():
 
 		# pad with zeros
 		padded_targets = pad_sequences(self.tokenized_targets, maxlen=max_length_target, padding='post')
-		
+
 		self.decoder_output_data = to_categorical(padded_targets, self.VOCAB_SIZE)
 
 		print(self.decoder_output_data.shape)
+
+	def build_model(self):
+		# encoder will be used to capture space-dependent 
+		# relations between words from the questions
+		encoder_inputs = Input(shape=(None,))
+
+		encoder_embedding = Embedding(self.VOCAB_SIZE, 200, mask_zero=True)(encoder_inputs)
+
+		encoder_outputs, state_h, state_c = LSTM(200, return_state=True)(encoder_embedding)
+
+		encoder_states = [state_h, state_c]
+
+		# decoder will be used to capture space-dependent relations 
+		# between words from the answers using encoder's 
+		# internal state as a context
+
+		decoder_inputs = Input(shape=(None,))
+
+		decoder_embeddings = Embedding(self.VOCAB_SIZE, 200, mask_zero=True)(decoder_inputs)
+
+		decoder_lstm = LSTM(200, return_state=True, return_sequences=True)
+
+		decoder_outputs, _, _ = decoder_lstm(decoder_embeddings, initial_state=encoder_states)
+
+		# the decoder is connected to the output Dense layer
+
+		decoder_dense = Dense(self.VOCAB_SIZE, activation=softmax)
+		output = decoder_dense(decoder_outputs)
+
+		self.model = Model([encoder_inputs, decoder_inputs], output)
+
+		self.model.compile(optimizer=RMSprop(), loss='categorical_crossentropy')
+
+		self.model.summary()
+
+	def train_model(self):
+		self.model.fit([self.encoder_input_data, self.decoder_input_data], self.decoder_output_data,
+						batch_size=50, epochs=100)
+
+
+
+
+
+
 
 	# for testing tensorflow install. Remove later
 	def test_tensorflow(self):
@@ -84,3 +128,5 @@ if __name__ == '__main__':
 
 	chatNN.load_data()
 	chatNN.build_vocabulary()
+	chatNN.build_model()
+	chatNN.train_model()
