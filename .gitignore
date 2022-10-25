@@ -1,0 +1,6 @@
+.DS_Store
+chatbot-corpus/
+dataset.csv
+movie-corpus/
+ubuntu-corpus/
+wiki-corpus/
