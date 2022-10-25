@@ -5,7 +5,7 @@ import pandas as pd
 #from keras.layers import Embedding, LSTM, Dense
 #from keras.optimizers import RMSprop
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-#from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.preprocessing.text import Tokenizer
 
 class ChatNN():
@@ -47,6 +47,18 @@ class ChatNN():
 		print(f'Max Length Target: {max_length_target}')
 
 		print(decoder_input_data.shape)
+
+		# perform one hot encoding of targets
+
+		for i in range(len(self.tokenized_targets)):
+			self.tokenized_targets[i] = self.tokenized_targets[i][1:]
+
+		# pad with zeros
+		padded_targets = pad_sequences(self.tokenized_targets, maxlen=max_length_target, padding='post')
+		
+		self.decoder_output_data = to_categorical(padded_targets, self.VOCAB_SIZE)
+
+		print(self.decoder_output_data.shape)
 
 	# for testing tensorflow install. Remove later
 	def test_tensorflow(self):
