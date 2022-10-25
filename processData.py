@@ -123,7 +123,7 @@ def processChatBot():
 						try:
 							i = cleanUtterance(convo[0])
 							r = cleanUtterance(convo[1])
-							csv_file.write(f'{i},{r}\n')
+							csv_file.write(f'{i},<START>{r}<END>\n')
 						except:
 							pass
 
