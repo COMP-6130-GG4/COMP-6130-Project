@@ -54,11 +54,13 @@ def processCornellMovie():
 
 
 	with open('dataset.csv', 'w', newline='') as csv_file:
-		csv_file.write('input,response\n')
+		csv_file.write('inputs,targets\n')
 		for i, r in zip(inputTexts, responseTexts):
 			i = cleanUtterance(i)
 			r = cleanUtterance(r)
-			csv_file.write(f'{i},{r}\n')
+
+			if not(i == '') and not(r == ''):
+				csv_file.write(f'{i},<START>{r}<END>\n')
 
 def processUbuntu():
 
@@ -101,14 +103,14 @@ def processChatBot():
 
 	data = None
 
-	with open("chatbot-corpus/ai.yml", "r") as stream:
-		try:
-			data = yaml.safe_load(stream)
-		except yaml.YAMLError as exc:
-			print(exc)
+	#with open("chatbot-corpus/ai.yml", "r") as stream:
+	#	try:
+	#		data = yaml.safe_load(stream)
+	#	except yaml.YAMLError as exc:
+	#		print(exc)
 
 	with open('dataset.csv', 'w', newline='') as csv_file:
-		csv_file.write('input,response\n')
+		csv_file.write('inputs,targets\n')
 
 		for fileName in yamlList:
 			with open("chatbot-corpus/" + fileName, "r") as stream:
