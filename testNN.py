@@ -21,6 +21,7 @@ class ChatNN():
 	def load_data(self):
 		self.dataset = pd.read_csv('./dataset.csv')
 
+		# only use the first 1000 since the dataset is too big
 		self.inputList = self.dataset['inputs'].to_list()
 		self.targetList = self.dataset['targets'].to_list()
 
@@ -66,9 +67,9 @@ class ChatNN():
 		# relations between words from the questions
 		self.encoder_inputs = Input(shape=(None,))
 
-		encoder_embedding = Embedding(self.VOCAB_SIZE, 200, mask_zero=True)(self.encoder_inputs)
+		encoder_embedding = Embedding(self.VOCAB_SIZE, 800, mask_zero=True)(self.encoder_inputs)
 
-		encoder_outputs, state_h, state_c = LSTM(200, return_state=True)(encoder_embedding)
+		encoder_outputs, state_h, state_c = LSTM(800, return_state=True)(encoder_embedding)
 
 		self.encoder_states = [state_h, state_c]
 
@@ -78,9 +79,9 @@ class ChatNN():
 
 		self.decoder_inputs = Input(shape=(None,))
 
-		self.decoder_embedding = Embedding(self.VOCAB_SIZE, 200, mask_zero=True)(self.decoder_inputs)
+		self.decoder_embedding = Embedding(self.VOCAB_SIZE, 800, mask_zero=True)(self.decoder_inputs)
 
-		self.decoder_lstm = LSTM(200, return_state=True, return_sequences=True)
+		self.decoder_lstm = LSTM(800, return_state=True, return_sequences=True)
 
 		decoder_outputs, _, _ = self.decoder_lstm(self.decoder_embedding, initial_state=self.encoder_states)
 
@@ -102,8 +103,8 @@ class ChatNN():
 
 	def make_inference_model(self):
 		# two inputs for the state vectors returned by the encoder
-		decoder_state_input_h = Input(shape=(200,))
-		decoder_state_input_c = Input(shape=(200,))
+		decoder_state_input_h = Input(shape=(800,))
+		decoder_state_input_c = Input(shape=(800,))
 		decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
 		# these state vectors are used as an initial state
 		# for LSTM layer in the inference decoder
@@ -139,8 +140,9 @@ class ChatNN():
 
 
 
-	def getResponse(self):
-		states_values = self.encoder_model.predict(self.tokenizeUtterance(input('Say something: ')))
+	def getResponse(self, userInput):
+		#states_values = self.encoder_model.predict(self.tokenizeUtterance(input('Say something: ')))
+		states_values = self.encoder_model.predict(self.tokenizeUtterance(userInput))
 
 		empty_target_seq = np.zeros((1,1))
 		empty_target_seq[0, 0] = self.tokenizer.word_index['start']
@@ -160,7 +162,7 @@ class ChatNN():
 				if sampled_word_index == index:
 					if word != 'end':
 						decoded_response += ' {}'.format(word)
-						sampled_word = word
+					sampled_word = word
 
 			# repeat until we generate the end-of-sequence word 'end'
 			# or we hit the length of answer limit
@@ -186,4 +188,8 @@ if __name__ == '__main__':
 	chatNN.build_model()
 	chatNN.train_encoder_decoder()
 	chatNN.make_inference_model()
-	print(chatNN.getResponse())
+
+	userInput = None
+	while not userInput == 'QUIT':
+		userInput = input('Say Something: ')
+		print(chatNN.getResponse(userInput))
