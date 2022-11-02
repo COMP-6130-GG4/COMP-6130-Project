@@ -1,6 +1,7 @@
 import csv
 import pandas as pd
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras import Input, Model
 from tensorflow.keras.activations import softmax
 from tensorflow.keras.layers import Embedding, LSTM, Dense
@@ -8,6 +9,7 @@ from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.models import model_from_json
 
 class ChatNN():
 
@@ -65,11 +67,11 @@ class ChatNN():
 	def build_model(self):
 		# encoder will be used to capture space-dependent 
 		# relations between words from the questions
-		self.encoder_inputs = Input(shape=(None,))
+		self.encoder_inputs = Input(shape=(None,), name='encoder_inputs')
 
-		encoder_embedding = Embedding(self.VOCAB_SIZE, 800, mask_zero=True)(self.encoder_inputs)
+		encoder_embedding = Embedding(self.VOCAB_SIZE, 800, mask_zero=True, name="encoder_embedding")(self.encoder_inputs)
 
-		encoder_outputs, state_h, state_c = LSTM(800, return_state=True)(encoder_embedding)
+		encoder_outputs, state_h, state_c = LSTM(800, return_state=True, name="encoder_lstm")(encoder_embedding)
 
 		self.encoder_states = [state_h, state_c]
 
@@ -77,17 +79,17 @@ class ChatNN():
 		# between words from the answers using encoder's 
 		# internal state as a context
 
-		self.decoder_inputs = Input(shape=(None,))
+		self.decoder_inputs = Input(shape=(None,), name="decoder_inputs")
 
-		self.decoder_embedding = Embedding(self.VOCAB_SIZE, 800, mask_zero=True)(self.decoder_inputs)
+		self.decoder_embedding = Embedding(self.VOCAB_SIZE, 800, mask_zero=True, name="decoder_embedding")(self.decoder_inputs)
 
-		self.decoder_lstm = LSTM(800, return_state=True, return_sequences=True)
+		self.decoder_lstm = LSTM(800, return_state=True, return_sequences=True, name="decoder_lstm")
 
 		decoder_outputs, _, _ = self.decoder_lstm(self.decoder_embedding, initial_state=self.encoder_states)
 
 		# the decoder is connected to the output Dense layer
 
-		self.decoder_dense = Dense(self.VOCAB_SIZE, activation=softmax)
+		self.decoder_dense = Dense(self.VOCAB_SIZE, activation=softmax, name="decoder_dense")
 		output = self.decoder_dense(decoder_outputs)
 
 		self.model = Model([self.encoder_inputs, self.decoder_inputs], output)
@@ -98,8 +100,8 @@ class ChatNN():
 
 	def train_encoder_decoder(self):
 		self.model.fit([self.encoder_input_data, self.decoder_input_data], self.decoder_output_data,
-						batch_size=50, epochs=200)
-		self.model.save('model_big.h5')
+						batch_size=10, epochs=100)
+
 
 	def make_inference_model(self):
 		# two inputs for the state vectors returned by the encoder
@@ -118,11 +120,29 @@ class ChatNN():
 		self.decoder_model = Model(inputs=[self.decoder_inputs] + decoder_states_inputs,
 							  outputs=[decoder_outputs] + decoder_states)
 
+		with open('decoder_model.json', 'w', encoding='utf8') as f:
+			f.write(self.decoder_model.to_json())
+		self.decoder_model.save_weights('decoder_model_weights.h5')
+
+
 		# single encoder input is an utterance, represented as a sequence 
 		# of integers padded with zeros
 		self.encoder_model = Model(inputs=self.encoder_inputs, outputs=self.encoder_states)
 
+		with open('encoder_model.json', 'w', encoding='utf8') as f:
+			f.write(self.encoder_model.to_json())
+		self.encoder_model.save_weights('encoder_model_weights.h5')
 
+
+	def load_model(self, model_filename, model_weights_filename):
+		with open(model_filename, 'r', encoding='utf8') as f:
+			model = model_from_json(f.read())
+		model.load_weights(model_weights_filename)
+		return model
+
+	def load_pretrained_model(self):
+		self.encoder_model = self.load_model('encoder_model.json', 'encoder_model_weights.h5')
+		self.decoder_model = self.load_model('decoder_model.json', 'decoder_model_weights.h5')
 
 	def tokenizeUtterance(self, utt):
 		# convert input string to lowercase
@@ -185,11 +205,15 @@ if __name__ == '__main__':
 
 	chatNN.load_data()
 	chatNN.build_vocabulary()
-	chatNN.build_model()
-	chatNN.train_encoder_decoder()
-	chatNN.make_inference_model()
+	#chatNN.build_model()
+	#chatNN.train_encoder_decoder()
+	#chatNN.make_inference_model()
+
+	chatNN.load_pretrained_model()
+
 
 	userInput = None
 	while not userInput == 'QUIT':
 		userInput = input('Say Something: ')
-		print(chatNN.getResponse(userInput))
+		if not(userInput == 'QUIT'):
+			print(chatNN.getResponse(userInput))
