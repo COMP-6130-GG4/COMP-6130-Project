@@ -3,82 +3,7 @@ import re
 import pandas as pd
 import yaml
 
-def processCornellWiki():
-	corpus = Corpus('./wiki-corpus')
-
-	corpus.print_summary_stats()
-
-	corpus_conversations = corpus.iter_conversations()
-
-	inputTexts = []
-	responseTexts = []
-
-	for convo in corpus_conversations:
-		i = 0
-		for utt in convo.iter_utterances():
-			if i == 1:
-				inputTexts.append(utt.text)
-				i = 0
-			else:
-				responseTexts.append(utt.text)
-				i = 1
-
-
-	with open('dataset.csv', 'w', newline='') as csv_file:
-		csv_file.write('input,response\n')
-		for i, r in zip(inputTexts, responseTexts):
-			i = cleanUtterance(i)
-			r = cleanUtterance(r)
-			csv_file.write(f'{i},{r}\n')
-
-
-def processCornellMovie():
-	corpus = Corpus('./movie-corpus')
-
-	corpus.print_summary_stats()
-
-	corpus_conversations = corpus.iter_conversations()
-
-	inputTexts = []
-	responseTexts = []
-
-	for convo in corpus_conversations:
-		i = 0
-		for utt in convo.iter_utterances():
-			if i == 1:
-				inputTexts.append(utt.text)
-				i = 0
-			else:
-				responseTexts.append(utt.text)
-				i = 1
-
-
-	with open('dataset.csv', 'w', newline='') as csv_file:
-		csv_file.write('inputs,targets\n')
-		for i, r in zip(inputTexts, responseTexts):
-			i = cleanUtterance(i)
-			r = cleanUtterance(r)
-
-			if not(i == '') and not(r == ''):
-				csv_file.write(f'{i},<START>{r}<END>\n')
-
-def processUbuntu():
-
-	ubuntuDf = pd.read_csv('ubuntu-corpus/dialogueText.csv')
-
-	ubuntuTextDf = ubuntuDf['text']
-
-	i = 0
-	for row in ubuntuTextDf:
-		if(i == 0):
-			print("Input: " + str(row))
-			i = 1
-		else:
-			print("Response: " + str(row))
-			i = 0
-		print('-----------')
-
-def processChatBot():
+def processChatBot(fileName=None):
 
 	yamlList = [
 		'ai.yml',
@@ -103,31 +28,34 @@ def processChatBot():
 
 	data = None
 
-	#with open("chatbot-corpus/ai.yml", "r") as stream:
-	#	try:
-	#		data = yaml.safe_load(stream)
-	#	except yaml.YAMLError as exc:
-	#		print(exc)
+	if fileName:
 
-	with open('dataset.csv', 'w', newline='') as csv_file:
-		csv_file.write('inputs,targets\n')
+		with open(f'chatbot-corpus/{fileName}', 'r') as stream:
+			try:
+				data = yaml.safe_load(stream)
+			except yaml.YAMLError as exc:
+				print(exc)
 
-		for fileName in yamlList:
-			with open("chatbot-corpus/" + fileName, "r") as stream:
-				try:
-					data = yaml.safe_load(stream)
-				except yaml.YAMLError as exc:
-					print(exc)
+	else:
+		with open('dataset.csv', 'w', newline='') as csv_file:
+			csv_file.write('inputs,targets\n')
 
-				if(data):
+			for fileName in yamlList:
+				with open("chatbot-corpus/" + fileName, "r") as stream:
+					try:
+						data = yaml.safe_load(stream)
+					except yaml.YAMLError as exc:
+						print(exc)
 
-					for convo in data['conversations']:
-						try:
-							i = cleanUtterance(convo[0])
-							r = cleanUtterance(convo[1])
-							csv_file.write(f'{i},<START>{r}<END>\n')
-						except:
-							pass
+					if(data):
+
+						for convo in data['conversations']:
+							try:
+								i = cleanUtterance(convo[0])
+								r = cleanUtterance(convo[1])
+								csv_file.write(f'{i},<START>{r}<END>\n')
+							except:
+								pass
 
 
 # Util Function
@@ -193,10 +121,6 @@ def cleanUtterance(utt):
 
 
 if __name__ == '__main__':
-	#processCornellMovie()
-	# not sure if i want to use the Ubuntu just yet
-	#processUbuntu()
-	#processCornellWiki()
 	processChatBot()
 
 		

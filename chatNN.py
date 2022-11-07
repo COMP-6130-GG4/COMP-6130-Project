@@ -2,6 +2,7 @@ import csv
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from tensorflow.keras import Input, Model
 from tensorflow.keras.activations import softmax
 from tensorflow.keras.layers import Embedding, LSTM, Dense
@@ -94,13 +95,22 @@ class ChatNN():
 
 		self.model = Model([self.encoder_inputs, self.decoder_inputs], output)
 
-		self.model.compile(optimizer=RMSprop(), loss='categorical_crossentropy')
+		self.model.compile(optimizer=RMSprop(), loss='categorical_crossentropy', metrics=['accuracy'])
 
 		self.model.summary()
 
 	def train_encoder_decoder(self):
-		self.model.fit([self.encoder_input_data, self.decoder_input_data], self.decoder_output_data,
-						batch_size=10, epochs=100)
+		history = self.model.fit([self.encoder_input_data, self.decoder_input_data], self.decoder_output_data,
+							batch_size=10, epochs=150)
+
+		# summarize history for accuracy and loss
+		plt.plot(history.history['accuracy'])
+		plt.plot(history.history['loss'])
+		plt.title('Accuracy and Loss (Full Dataset)')
+		plt.ylabel('Value')
+		plt.xlabel('Epoch')
+		plt.legend(['Accuracy', 'Loss'], loc='upper left')
+		plt.show()
 
 
 	def make_inference_model(self):
@@ -205,11 +215,11 @@ if __name__ == '__main__':
 
 	chatNN.load_data()
 	chatNN.build_vocabulary()
-	#chatNN.build_model()
-	#chatNN.train_encoder_decoder()
-	#chatNN.make_inference_model()
+	chatNN.build_model()
+	chatNN.train_encoder_decoder()
+	chatNN.make_inference_model()
 
-	chatNN.load_pretrained_model()
+	#chatNN.load_pretrained_model()
 
 
 	userInput = None
