@@ -1,4 +1,3 @@
-from convokit import Corpus, download
 import re
 import pandas as pd
 import yaml
